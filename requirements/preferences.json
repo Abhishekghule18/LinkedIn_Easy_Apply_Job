@@ -1,0 +1,18 @@
+{
+  "job_titles": [
+    "Software Engineer",
+    "Python Developer",
+    "Data Scientist"
+  ],
+  "locations": [
+    "United States",
+    "Remote"
+  ],
+  "experience_range": [
+    3,
+    8
+  ],
+  "remote_only": true,
+  "easy_apply_only": true,
+  "skip_complex_forms": true
+}

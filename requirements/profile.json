@@ -1,0 +1,19 @@
+{
+  "name": "John Doe",
+  "email": "johndoe@example.com",
+  "phone": "+1-123-456-7890",
+  "experience_years": 5,
+  "skills": [
+    "Python",
+    "Playwright",
+    "Automation",
+    "Machine Learning",
+    "Google Gemini",
+    "SQL"
+  ],
+  "current_location": "New York, NY",
+  "preferred_locations": [
+    "Remote",
+    "New York, NY"
+  ]
+}
