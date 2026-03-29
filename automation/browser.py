@@ -52,11 +52,34 @@ class BrowserManager:
         await asyncio.sleep(random.uniform(min_sec, max_sec))
 
     @staticmethod
+    async def random_mouse_move(page: Page):
+        """Simulates semi-random, curved mouse movements to heavily reduce bot detection."""
+        try:
+            viewport = page.viewport_size
+            width = viewport.get('width', 1920) if viewport else 1920
+            height = viewport.get('height', 1080) if viewport else 1080
+            
+            # Execute 2-4 fluid movement arcs across the visible viewport
+            for _ in range(random.randint(2, 4)):
+                target_x = random.randint(50, width - 50)
+                target_y = random.randint(50, height - 50)
+                # Playwright allows setting 'steps' which triggers multiple MouseMove events
+                await page.mouse.move(target_x, target_y, steps=random.randint(10, 25))
+                await BrowserManager.human_delay(0.05, 0.2)
+        except Exception:
+            pass # Graceful fallback for environments missing viewport data
+
+    @staticmethod
     async def random_scroll(page: Page):
-        """Simulates random page scrolling to avoid detection"""
+        """Simulates random page scrolling interspersed with realistic mouse movements."""
+        # Pre-scroll organic mouse hover
+        await BrowserManager.random_mouse_move(page)
+        
         scroll_amount = random.randint(300, 700)
         direction = random.choice([1, -1]) if random.random() > 0.8 else 1
         await page.evaluate(f"window.scrollBy(0, {scroll_amount * direction})")
+        
+        # Post-scroll recovery delay
         await BrowserManager.human_delay(0.5, 1.5)
 
     @staticmethod
