@@ -1,1 +1,27 @@
+# 🔑 Security Data
 .env
+
+# 📊 User Private Data & Resumes
+# We ignore PDFs and personal profiles to prevent accidentally committing PII or phone numbers to GitHub.
+requirements/*.pdf
+requirements/profile.json
+storage/
+logs/
+applied_jobs.sqlite
+
+# 🐍 Python Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# 🐍 Python Bytecode / Caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# 💻 OS Specific Files
+.DS_Store
+Thumbs.db
