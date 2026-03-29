@@ -35,16 +35,24 @@ class ApplicationAgent:
 
         job_titles = self.preferences.get("job_titles", ["Software Engineer"])
         locations = self.preferences.get("locations", ["Remote"])
+        daily_limit = self.preferences.get("daily_apply_limit", 40)
+        pages_per_search = self.preferences.get("max_pages", 3)
 
         try:
             for title in job_titles:
                 for loc in locations:
-                    log_info(f"==== Starting specific search loop: [{title}] in [{loc}] ====")
-                    try:
-                        await self.process_search_query(linkedin, title, loc)
-                    except Exception as e:
-                        log_error(f"Search query combination failed for {title} in {loc}: {e}")
-                        continue
+                    for page_num in range(pages_per_search):
+                        if self.tracker.reached_daily_limit(daily_limit):
+                            log_info(f"Daily application quota ({daily_limit}) hit. Suspending orchestrator indefinitely bounds.")
+                            return
+                            
+                        offset = page_num * 25
+                        log_info(f"==== Queue Bound: [{title}] in [{loc}] (Scraping Page {page_num+1}/{pages_per_search}) ====")
+                        try:
+                            await self.process_search_query(linkedin, title, loc, offset)
+                        except Exception as e:
+                            log_error(f"Search query node collapsed for parameters [{title} | {loc}]: {e}")
+                            break # Terminate inner pagination loops preventing chained URL timeouts
                         
         except Exception as e:
             log_error(f"Fatal unhandled error inside orchestrator loop: {e}")
@@ -52,9 +60,9 @@ class ApplicationAgent:
             log_info("Shutting down BrowserManager safely.")
             await self.browser_manager.close()
 
-    async def process_search_query(self, linkedin: LinkedInAutomator, title: str, loc: str):
+    async def process_search_query(self, linkedin: LinkedInAutomator, title: str, loc: str, offset: int):
         # 3. Search Jobs
-        await linkedin.search_jobs(title, loc)
+        await linkedin.search_jobs(title, loc, offset)
         
         # Extract job cards visible locally
         jobs = await linkedin.extract_jobs_from_page()
@@ -100,20 +108,24 @@ class ApplicationAgent:
             desc_element = linkedin.page.locator("div.jobs-description__container")
             job_desc = await desc_element.inner_text() if await desc_element.count() > 0 else ""
             
-            # 4. Filter Jobs
-            if not self.job_filter.evaluate_job(real_title, company, loc, job_desc):
-                log_info(f"[SKIP] Job failed strict requirements filter: {company} - {real_title}")
+            # 4. Filter Jobs and Score
+            is_match, score, target_resume = self.job_filter.evaluate_job(real_title, company, loc, job_desc)
+            if not is_match or score < 60:
+                log_info(f"[SKIP] Failed threshold (score: {score}): {company} - {real_title}")
                 return
                 
+            from config.settings import BASE_DIR
+            resume_path_abs = BASE_DIR / "requirements" / target_resume
+
             # 5. Apply Jobs
-            log_info(f"[APPLY] Initiating application flow for {company} - {real_title}")
-            success = await linkedin.apply_to_job(job_link, self.llm_agent)
+            log_info(f"[APPLY] Launching execution flow tracking ({target_resume}) against {company} [Score: {score}/100]")
+            success = await linkedin.apply_to_job(job_link, self.llm_agent, resume_path_abs)
             
             # 6. Track Applications (Append Result)
             if success:
-                self.tracker.save_applied_job(company, real_title, loc, job_link, notes="Applied automatically via Easy Apply.")
+                self.tracker.save_applied_job(company, real_title, loc, job_link, notes=f"Automated Score: {score}")
             else:
-                self.tracker.save_failed_job(company, real_title, job_link, error="Apply button missing or form sequence unsupported.")
+                self.tracker.save_failed_job(company, real_title, job_link, error="Fatal modal traversal desync.")
                 
         except Exception as e:
             log_error(f"Error inspecting or applying to job {job_link}: {e}")

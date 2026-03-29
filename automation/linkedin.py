@@ -2,9 +2,10 @@ from playwright.async_api import Page, TimeoutError as PlaywrightTimeoutError
 import logging
 import urllib.parse
 import asyncio
+from pathlib import Path
 from functools import wraps
 from automation.browser import BrowserManager
-from config.settings import get_preferences, get_resume_path
+from config.settings import get_preferences
 
 logger = logging.getLogger(__name__)
 
@@ -43,13 +44,16 @@ class LinkedInAutomator:
             raise Exception("Login failed")
 
     @with_retry(retries=3, delay_sec=2)
-    async def search_jobs(self, job_title: str, location: str):
-        logger.info(f"Searching for {job_title} in {location}")
+    async def search_jobs(self, job_title: str, location: str, offset: int = 0):
+        logger.info(f"Searching for {job_title} in {location} [OFFSET: {offset}]")
         query = urllib.parse.urlencode({
             'keywords': job_title,
             'location': location,
             'f_AL': 'true' if self.preferences.get('easy_apply_only', True) else '',
         })
+        if offset > 0:
+            query += f"&start={offset}"
+            
         url = f"https://www.linkedin.com/jobs/search/?{query}"
         await self.page.goto(url)
         await BrowserManager.human_delay(2, 4)
@@ -73,11 +77,10 @@ class LinkedInAutomator:
         return job_links
 
     @with_retry(retries=3, delay_sec=2)
-    async def upload_resume(self) -> bool:
-        """Detects upload button, uploads resume, and confirms upload."""
-        resume_path = get_resume_path()
+    async def upload_resume(self, resume_path: Path) -> bool:
+        """Detects upload button, dynamically uploads specifically routed resume, and confirms upload."""
         if not resume_path.exists():
-            logger.warning(f"Resume not found at {resume_path}. Skipping upload.")
+            logger.warning(f"Routed resume not found at {resume_path}. Skipping upload block.")
             return False
             
         logger.info("Checking for resume upload section...")
@@ -119,7 +122,7 @@ class LinkedInAutomator:
         logger.info("No resume upload requirement detected on this page step.")
         return False
         
-    async def apply_to_job(self, job_url: str, llm_agent) -> bool:
+    async def apply_to_job(self, job_url: str, llm_agent, target_resume: Path) -> bool:
         await self.page.goto(job_url)
         await BrowserManager.human_delay(2, 4)
         
@@ -133,31 +136,33 @@ class LinkedInAutomator:
             await easy_apply_button.first.click()
             await BrowserManager.human_delay(1, 2)
             
-            # Simple form filling loop (for visual structure)
+            # Application modal scanning iteration loop
             max_steps = 10
             steps = 0
             while steps < max_steps:
+                # 1. Look for upload components and dispatch native handlers
+                await self.upload_resume(target_resume)
+                
+                # 2. Complete flow detection
                 submit_button = self.page.locator("button[aria-label='Submit application']")
                 if await submit_button.count() > 0:
                     logger.info("Application ready to submit! Simulated click.")
-                    # await submit_button.click() # Uncomment to actually submit
+                    # await submit_button.click() # Uncomment when tests pass to actually execute production payload
                     await BrowserManager.human_delay(2, 3)
                     
-                    # dismiss modal if needed
+                    # dismiss modal cleanly if testing natively to avoid corrupting session state
                     dismiss = self.page.locator("button[aria-label='Dismiss']")
                     if await dismiss.count() > 0:
                         await dismiss.first.click()
                         
                     return True
                 
+                # 3. Pagination detection
                 next_button = self.page.locator("button[aria-label='Continue to next step']")
                 if await next_button.count() > 0:
-                    # TODO: Inject LLM logic here to actually parse form inputs and fill
-                    # Example: inputs = await self.page.query_selector_all("input")
-                    # ans = llm_agent.answer_question(...)
-                    
+                    # Form interpolation hooks go here (for fields matching LLM context arrays)
                     await next_button.click()
-                    await BrowserManager.human_delay(1, 3)
+                    await BrowserManager.human_delay(1, 4)
                     steps += 1
                 else:
                     review_button = self.page.locator("button[aria-label='Review your application']")
@@ -167,7 +172,7 @@ class LinkedInAutomator:
                         steps += 1
                     else:
                         logger.warning("Unrecognized modal state. Aborting apply.")
-                        # cancel application
+                        # cancel application gracefully
                         close_btn = self.page.locator("button[aria-label='Dismiss']")
                         if await close_btn.count() > 0:
                             await close_btn.first.click()

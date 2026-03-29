@@ -11,8 +11,17 @@ class JobTracker:
         self._update_session_time()
 
     def _update_session_time(self):
+        today = datetime.utcnow().date().isoformat()
+        if self.session.get("last_run_date") != today:
+            self.session["last_run_date"] = today
+            self.session["daily_applied"] = 0
+            
         self.session["last_run_time"] = datetime.utcnow().isoformat()
         StorageManager.save_session(self.session)
+
+    def reached_daily_limit(self, limit: int) -> bool:
+        """Determines if the application run queue exceeds the daily global cap."""
+        return self.session.get("daily_applied", 0) >= limit
 
     def is_job_applied(self, job_link: str) -> bool:
         """Check if job is already applied strictly matching job_link."""
@@ -38,6 +47,7 @@ class JobTracker:
         self.applied_jobs.append(job_data)
         StorageManager.save_applied_jobs(self.applied_jobs)
         
+        self.session["daily_applied"] = self.session.get("daily_applied", 0) + 1
         self.session["total_applied"] = self.session.get("total_applied", 0) + 1
         StorageManager.save_session(self.session)
         log_success(f"Application recorded successfully: {company} | {role}")
