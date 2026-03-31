@@ -1,19 +1,68 @@
 {
-  "name": "John Doe",
-  "email": "johndoe@example.com",
-  "phone": "+1-123-456-7890",
-  "experience_years": 5,
-  "skills": [
-    "Python",
-    "Playwright",
-    "Automation",
-    "Machine Learning",
-    "Google Gemini",
-    "SQL"
+  "name": "Rohan Joshi",
+  "email": "abhishekghule018.socials@gmail.com",
+  "phone": "+91-9974837211",
+  "experience_years": 4,
+  "headline_roles": [
+    ".NET Developer",
+    "Backend Developer",
+    "Software Engineer",
+    ".NET Full Stack Developer",
+    "ASP.NET Core Developer"
   ],
-  "current_location": "New York, NY",
+  "must_have_skills": [
+    "C#",
+    ".NET",
+    ".NET Core",
+    "ASP.NET Core",
+    "Web API",
+    "Microservices",
+    "SQL Server",
+    "Entity Framework Core"
+  ],
+  "good_to_have_skills": [
+    "Azure",
+    "Redis",
+    "RabbitMQ",
+    "ElasticSearch",
+    "Docker",
+    "Kubernetes",
+    "CI/CD",
+    "Azure DevOps"
+  ],
+  "frontend_skills": [
+    "Angular",
+    "TypeScript",
+    "JavaScript"
+  ],
+  "search_keywords": [
+    ".NET Core",
+    "ASP.NET Core",
+    "C#",
+    "Web API",
+    "Microservices",
+    "Azure",
+    "Backend",
+    "Full Stack",
+    "Software Engineer"
+  ],
+  "exclude_keywords": [
+    "PHP",
+    "Wordpress",
+    "Python Only",
+    "Java Only",
+    "Frontend Only",
+    "React Native",
+    "Intern",
+    "Principal",
+    "Architect"
+  ],
+  "current_location": "Pune, India",
   "preferred_locations": [
-    "Remote",
-    "New York, NY"
-  ]
+    "Pune",
+    "Bangalore",
+    "Hyderabad",
+    "Mumbai"
+  ],
+  "preferred_work_type": []
 }

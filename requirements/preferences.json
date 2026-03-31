@@ -1,18 +1,56 @@
 {
   "job_titles": [
+    ".NET Developer",
+    ".NET Core Developer",
+    "ASP.NET Core Developer",
+    "Backend Developer",
     "Software Engineer",
-    "Python Developer",
-    "Data Scientist"
+    "Backend Engineer",
+    ".NET Full Stack Developer",
+    "C# Developer",
+    "Software Engineer .NET"
+  ],
+  "search_queries": [
+    ".net"
   ],
   "locations": [
-    "United States",
-    "Remote"
+    ""
   ],
   "experience_range": [
     3,
-    8
+    5
   ],
-  "remote_only": true,
+  "filters_documentation": {
+    "f_AL": "Locks search to Easy Apply Only jobs. (true)",
+    "f_TPR": "Time Posted Range constraint. 'r86400' = Past 24 hours, 'r604800' = Past 7 days.",
+    "f_E": "Experience Level database codes. 1=Intern, 2=Entry, 3=Associate, 4=Mid-Senior, 5=Director. Use commas to stack.",
+    "sortBy": "Search sorting algorithm. 'R' = Relevance, 'DD' = Date Descending (Most Recent).",
+    "geoId": "LinkedIn physical geography ID. '102713980' = India.",
+    "distance": "Proximity radius from central location or geoId."
+  },
+  "filters": {
+    "f_AL": "true",
+    "f_TPR": "r86400",
+    "sortBy": "R",
+    "f_E": "3,4"
+  },
+  "exclude_titles": [
+    "Frontend Developer",
+    "Principal Engineer",
+    "Architect",
+    "Lead Engineer",
+    "Wordpress Developer",
+    "PHP Developer"
+  ],
+  "exclude_keywords": [
+    "Intern",
+    "Senior Architect",
+    "10+ years",
+    "React Native",
+    "Angular Only"
+  ],
+  "skip_complex_forms": true,
   "easy_apply_only": true,
-  "skip_complex_forms": true
+  "max_applications_per_run": 30,
+  "min_match_score": 0.65
 }
