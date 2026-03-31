@@ -5,8 +5,10 @@
 # We ignore PDFs and personal profiles to prevent accidentally committing PII or phone numbers to GitHub.
 requirements/*.pdf
 requirements/profile.json
+requirements/preferences.json
 storage/
 logs/
+browser_data/
 applied_jobs.sqlite
 
 # 🐍 Python Virtual Environments
@@ -25,3 +27,4 @@ __pycache__/
 # 💻 OS Specific Files
 .DS_Store
 Thumbs.db
+requirements/preferences.json

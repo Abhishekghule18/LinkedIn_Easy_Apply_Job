@@ -21,10 +21,20 @@ class JobFilter:
         """
         logger.info(f"Evaluating Match: '{job_title}' at {company} ({location})")
         
-        # 1. Quick Heuristic Filter (Strict Remote Constraint)
-        is_remote_job = "remote" in location.lower() or "remote" in job_description.lower()
-        if self.preferences.get("remote_only", False) and not is_remote_job:
-            logger.info("Filter rejection: Candidate requires Remote only, but job does not indicate remote.")
+        # 1. Quick Heuristic Filters
+        lower_loc = location.lower()
+        lower_desc = job_description.lower()
+        lower_title = job_title.lower()
+        
+        pref_ex_titles = [t.lower() for t in self.preferences.get("exclude_titles", [])]
+        if any(ex in lower_title for ex in pref_ex_titles):
+            logger.info(f"Filter rejection: Job title matches exclude_titles constraint.")
+            return False, 0, "resume.pdf"
+            
+        # Merge exclude_keywords from both preferences and profile arrays
+        pref_ex_keywords = [k.lower() for k in self.preferences.get("exclude_keywords", [])] + [k.lower() for k in self.profile.get("exclude_keywords", [])]
+        if any(ex in lower_desc for ex in pref_ex_keywords):
+            logger.info("Filter rejection: Job description matches exclude_keywords constraint.")
             return False, 0, "resume.pdf"
             
         # 2. Smart LLM JSON Scoring Architecture
@@ -50,11 +60,14 @@ class JobFilter:
         Job Description: {safe_jd}
         
         RULES:
-        1. Evaluate Location match, Experience bracket requirements, and Skill overlap.
-        2. "score" must be an integer from 0 (terrible) to 100 (perfect).
-        3. Determine which resume from "Available Resumes in Database" natively suits this role best based on keyword matches, and set it to "selected_resume".
-        4. "is_match" should be true if it evaluates as a decent viable application without dealbreakers, else false.
-        5. Returning ANYTHING non-JSON (like text explanations or markdown blocks) will break the system. Output raw JSON `{{"is_match": bool, "score": int, "selected_resume": "string"}}` ONLY.
+        1. Evaluate Location match, Experience bracket requirements, and Skill overlap natively.
+        2. Pay close attention to the candidate's `must_have_skills`, but DO NOT aggressively issue a 0 score just because one exact technology mention is missing. Scale the score intuitively (e.g. 60-90) based on contextual similarities to the candidate's core industry and standard roles as defined by their profile.
+        3. IGNORE THE COMPANY NAME. If the Target Company is "Unknown Company", treat it as a perfectly valid job. DO NOT penalize or lower the score for missing company branding.
+        4. "score" must be an integer from 0 (terrible) to 100 (perfect).
+        5. If the Job Description appears to contain messy webpage navigation text (e.g., "Messaging, Notifications, My Network"), IGNORE that text and focus purely on the technical qualifications hidden within it. Do NOT score it 0 just because the text is unformatted.
+        6. Determine which resume from "Available Resumes in Database" natively suits this role best based on keyword matches, and set it to "selected_resume".
+        7. "is_match" should be true if it evaluates as a decent viable application without dealbreakers, else false.
+        8. Returning ANYTHING non-JSON (like text explanations or markdown blocks) will break the system. Output raw JSON `{{"is_match": bool, "score": int, "selected_resume": "string"}}` ONLY.
         """
         
         try:

@@ -33,24 +33,43 @@ class LinkedInAutomator:
         self.preferences = get_preferences()
         
     async def login(self):
-        logger.info("Navigating to LinkedIn login page. Please log in manually if required (60s timeout).")
+        logger.info("Navigating to LinkedIn. Your saved browser_data session cookies may auto-login.")
         await self.page.goto("https://www.linkedin.com/login")
+        
         try:
-            # Wait for feed to determine if logged in
-            await self.page.wait_for_selector(".feed-identity-module", timeout=60000)
-            logger.info("Successfully logged in.")
-        except PlaywrightTimeoutError:
-            logger.error("Login timed out. Make sure you logged in correctly.")
-            raise Exception("Login failed")
+            # We completely bypass HTML CSS selector scraping to perfectly evade LinkedIn A/B GUI tests.
+            # Instead, we monitor the active URL payload to verify you breached the login wall.
+            for _ in range(100): # 100 loops * 3s = 5 minutes timeout window
+                current_url = self.page.url
+                if "feed" in current_url or "jobs" in current_url or "in/" in current_url:
+                    logger.info("Successfully authenticated. Valid session detected via URL routing.")
+                    return
+                await asyncio.sleep(3)
+                
+            logger.error("Login timed out. The script never detected you reaching the news feed.")
+            raise Exception("Login verification failed due to manual timeout threshold.")
+        except Exception as e:
+            logger.error(f"Error checking login state: {e}")
+            raise e
 
     @with_retry(retries=3, delay_sec=2)
     async def search_jobs(self, job_title: str, location: str, offset: int = 0):
         logger.info(f"Searching for {job_title} in {location} [OFFSET: {offset}]")
-        query = urllib.parse.urlencode({
+        params = {
             'keywords': job_title,
-            'location': location,
-            'f_AL': 'true' if self.preferences.get('easy_apply_only', True) else '',
-        })
+        }
+        
+        # Omit location safely if the config passes an empty string for location-agnostic searching
+        if location:
+            params['location'] = location
+        
+        # Read exact LinkedIn API URL query parameters directly from JSON natively. 
+        # Zero hardcoded python mappings.
+        filters = self.preferences.get("filters", {})
+        for key, val in filters.items():
+            params[key] = str(val)
+
+        query = urllib.parse.urlencode(params)
         if offset > 0:
             query += f"&start={offset}"
             
@@ -127,10 +146,14 @@ class LinkedInAutomator:
         await BrowserManager.human_delay(2, 4)
         
         try:
-            # Locate easy apply button
-            easy_apply_button = self.page.locator(".jobs-apply-button--top-card button")
+            # Locate easy apply button by text explicitly so it bypasses CSS layout shifts seamlessly
+            easy_apply_button = self.page.locator("button:has-text('Easy Apply')")
             if await easy_apply_button.count() == 0:
-                logger.info("Easy Apply button not found. Skipping.")
+                # Fallback to general primary semantic buttons parsing
+                easy_apply_button = self.page.locator(".jobs-apply-button--top-card button, .jobs-apply-button button")
+                
+            if await easy_apply_button.count() == 0:
+                logger.info("Easy Apply button not found anywhere on the page framework. Skipping.")
                 return False
             
             await easy_apply_button.first.click()

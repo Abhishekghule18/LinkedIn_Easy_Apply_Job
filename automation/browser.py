@@ -19,15 +19,22 @@ class BrowserManager:
             '--disable-blink-features=AutomationControlled',
             '--start-maximized'
         ]
-        self.browser = await self.playwright.chromium.launch(
+        user_data_dir = os.path.join(os.getcwd(), "browser_data")
+        
+        # Utilizing persistent context to permanently save LinkedIn login cookies across runs
+        self.context = await self.playwright.chromium.launch_persistent_context(
+            user_data_dir=user_data_dir,
             headless=self.headless,
-            args=args
-        )
-        self.context = await self.browser.new_context(
-            viewport=None, # Useful for start-maximized
+            args=args,
+            viewport=None,
             user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         )
-        self.page = await self.context.new_page()
+        
+        # Persistent context launches an initial tab automatically
+        if self.context.pages:
+            self.page = self.context.pages[0]
+        else:
+            self.page = await self.context.new_page()
         # Additional anti-detection script injection
         await self.page.add_init_script("""
             Object.defineProperty(navigator, 'webdriver', {
@@ -41,8 +48,6 @@ class BrowserManager:
             await self.page.close()
         if self.context:
             await self.context.close()
-        if self.browser:
-            await self.browser.close()
         if self.playwright:
             await self.playwright.stop()
 
